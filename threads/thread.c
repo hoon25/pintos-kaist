@@ -251,7 +251,7 @@ thread_name (void) {
 	return thread_current ()->name;
 }
 
-/* Returns the running thread.
+/* Returns the running thread. 
    This is running_thread() plus a couple of sanity checks.
    See the big comment at the top of thread.h for details. */
 struct thread *
@@ -292,7 +292,7 @@ thread_exit (void) {
 	NOT_REACHED ();
 }
 
-/* Yields the CPU.  The current thread is not put to sleep and
+/* `	.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
 void
 thread_yield (void) {
@@ -307,6 +307,9 @@ thread_yield (void) {
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
+
+
+
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
@@ -406,7 +409,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	memset (t, 0, sizeof *t);
 	t->status = THREAD_BLOCKED;
 	strlcpy (t->name, name, sizeof t->name);
-	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
+	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *); // 4kb
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
 }

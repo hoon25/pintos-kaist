@@ -21,6 +21,7 @@ test_alarm_single (void)
 void
 test_alarm_multiple (void) 
 {
+  // test_sleep (5, 4);
   test_sleep (5, 7);
 }
 
@@ -110,7 +111,8 @@ test_sleep (int thread_cnt, int iterations)
       ASSERT (*op >= 0 && *op < thread_cnt);
       t = threads + *op;
 
-      new_prod = ++t->iterations * t->duration;
+      new_prod = ++(t->iterations) * t->duration;
+      printf("t:%d iteration: %d, duration%d\n",t->id, t->iterations, t->duration);
         
       msg ("thread %d: duration=%d, iteration=%d, product=%d",
            t->id, t->duration, t->iterations, new_prod);
@@ -123,6 +125,7 @@ test_sleep (int thread_cnt, int iterations)
     }
 
   /* Verify that we had the proper number of wakeups. */
+  // 스레드가 몇번 일어나야했는데 몇번(잘못)일어났따.
   for (i = 0; i < thread_cnt; i++)
     if (threads[i].iterations != iterations)
       fail ("thread %d woke up %d times instead of %d",
@@ -146,6 +149,7 @@ sleeper (void *t_)
       int64_t sleep_until = test->start + i * t->duration;
       timer_sleep (sleep_until - timer_ticks ());
       lock_acquire (&test->output_lock);
+      printf("sleep until : %d t->id : %d, i: %d outpos : %d\n ",sleep_until, t->id, i, *test->output_pos);
       *test->output_pos++ = t->id;
       lock_release (&test->output_lock);
     }
