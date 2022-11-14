@@ -72,6 +72,7 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 
+
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
 
@@ -263,7 +264,8 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	// list_push_back (&ready_list, &t->elem);
+	list_insert_ordered(&ready_list, &t->elem, less_priority, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -326,7 +328,8 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		// list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list, &curr->elem, less_priority, NULL);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -664,3 +667,17 @@ void thread_awake(int64_t ticks) {
 // int64_t get_next_tick_to_awake(void) {
 	
 // }
+
+/* return 0 : a < b 
+ * return 1 : a >= b
+ */
+bool less_priority(const struct list_elem *a, const struct list_elem *b, void *aux) {
+	struct thread *thread_a;
+	struct thread *thread_b;
+
+	thread_a = list_entry(a, struct thread, elem);
+	thread_b = list_entry(b, struct thread, elem);
+
+	if(thread_a->priority < thread_b->priority) return false;
+	else return true; 
+}
