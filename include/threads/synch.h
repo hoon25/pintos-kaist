@@ -28,6 +28,11 @@ bool lock_try_acquire (struct lock *);
 void lock_release (struct lock *);
 bool lock_held_by_current_thread (const struct lock *);
 
+/* priority */
+// void pri_donate(struct semaphore *sema, struct thread* curr);
+void pri_donate(struct lock *lock);
+
+
 /* Condition variable. */
 struct condition {
 	struct list waiters;        /* List of waiting threads. */
@@ -37,6 +42,11 @@ void cond_init (struct condition *);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
+
+/* custom macro to figure out which lock has this sema */
+#define sema_in(sema) ((struct lock *) ((uint8_t *) &sema - offsetof (struct lock, semaphore)))
+
+
 
 /* Optimization barrier.
  *
