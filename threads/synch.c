@@ -232,7 +232,9 @@ lock_release (struct lock *lock) {
 
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
-	if(curr->old_priority) curr->priority = curr->old_priority;
+	// if(curr->old_priority) curr->priority = curr->old_priority;
+	if(lock->old_pri) curr->priority = lock->old_pri;
+	lock->old_pri = NULL;
 	thread_yield();
 }
 
@@ -336,19 +338,14 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 	// 걔의 owner thread를 알아냄
 	// 그 쓰레드의 priority를 현재 쓰레드의 우선순위로 업뎃해줌
 	// 원래 갖고있던 priority 기억하게함
-	// release 할땐 기억하고 있던 원래 priority로 set
-
-// void pri_donate(struct semaphore *sema, struct thread* curr) {
-// 	struct lock *curr_lock = sema_in(sema);
-// 	curr_lock->holder->old_priority = curr_lock->holder->priority;
-// 	curr_lock->holder->priority = curr->priority;
-// }
+	// release 할땐 기억하고 있던 원래 priority로 set 
 
 void pri_donate(struct lock *lock) {
 	struct thread *curr = thread_current();
 	if(!lock->holder) return;
 	if(!lock->holder->priority) return;
-	lock->holder->old_priority = lock->holder->priority;
+	// lock->holder->old_priority = lock->holder->priority;
+	lock->old_pri = lock->holder->priority;
 	lock->holder->priority = curr->priority;
 }
 
