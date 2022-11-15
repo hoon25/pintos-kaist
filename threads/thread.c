@@ -216,6 +216,10 @@ thread_create (const char *name, int priority,
 	/* Initialize thread. */
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
+	
+	// list_init(&t->donaters);
+	// printf("%s %d\n\n",&t->name, list_empty(&t->donaters));
+	ASSERT(list_end(&t->donors) == list_head(&t->donors)->next);
 
 	/* Call the kernel_thread if it scheduled.
 	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
@@ -387,9 +391,6 @@ static void
 idle (void *idle_started_ UNUSED) {
 	struct semaphore *idle_started = idle_started_;
 	
-	// struct thread *cur = thread_current();
- 	// printf("\n:::idle cur tid :::%d %s\n", cur->tid, cur->name);
-
 	idle_thread = thread_current ();
 	sema_up (idle_started);
 
@@ -437,8 +438,10 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->status = THREAD_BLOCKED;
 	strlcpy (t->name, name, sizeof t->name);
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
-	t->priority = priority;
+	t->priority = t->nature_priority = priority;
 	t->magic = THREAD_MAGIC;
+
+	list_init(&t->donors);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -681,4 +684,18 @@ bool less_priority(const struct list_elem *a, const struct list_elem *b, void *a
 
 	if(thread_a->priority < thread_b->priority) return false;
 	else return true; 
+}
+
+/* return 0 : a < b 
+ * return 1 : a >= b
+ */
+bool less_priority_d(const struct list_elem *a, const struct list_elem *b, void *aux) {
+	struct thread *thread_a;
+	struct thread *thread_b;
+
+	thread_a = list_entry(a, struct thread, elem_d);
+	thread_b = list_entry(b, struct thread, elem_d);
+
+	if(thread_a->priority > thread_b->priority) return true;
+	else return false; 
 }

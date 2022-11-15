@@ -92,7 +92,9 @@ struct thread {
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
 	int wakeup_tick;					
-	int old_priority;					/*  */
+	int nature_priority;					/*  */
+	struct list donors;
+	struct list_elem elem_d;
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
@@ -152,5 +154,6 @@ int thread_get_load_avg (void);
 void do_iret (struct intr_frame *tf);
 
 bool less_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool less_priority_d(const struct list_elem *a, const struct list_elem *b, void *aux);
 
 #endif /* threads/thread.h */

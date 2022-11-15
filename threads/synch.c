@@ -229,12 +229,35 @@ lock_release (struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	struct thread *curr = thread_current();
+	struct thread *done;
+	struct list_elem *done_elem_d;
 
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
 	// if(curr->old_priority) curr->priority = curr->old_priority;
-	if(lock->old_pri) curr->priority = lock->old_pri;
-	lock->old_pri = NULL;
+	// if(lock->old_pri) curr->priority = lock->old_pri;
+	// lock->old_pri = NULL;
+
+	if(curr->priority != curr->nature_priority) {
+	// if(!list_empty(&curr->donors)) {
+		done_elem_d = list_begin(&curr->donors);
+
+		while(done_elem_d != list_end(&curr->donors)){
+
+			done = list_entry(done_elem_d, struct thread, elem_d);
+
+			if(curr->priority == done->priority) {
+				list_remove(&done->elem_d);
+				break;
+			} 
+			
+			done_elem_d = list_next(&done->elem_d);
+		}
+
+		if (list_empty(&curr->donors)) curr->priority = curr->nature_priority;
+		else curr->priority = list_entry(list_front(&curr->donors), struct thread, elem_d)->priority;
+	}
+
 	thread_yield();
 }
 
@@ -337,17 +360,24 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 	// list_entry로 이 sema를 갖고 있는 lock을 찾아서
 	// 걔의 owner thread를 알아냄
 	// 그 쓰레드의 priority를 현재 쓰레드의 우선순위로 업뎃해줌
-	// 원래 갖고있던 priority 기억하게함
+	// 원래 갖고있던 priority 기억하게함 <- nature_priority 추가해서 항상 알고있게함
+	// 기부받은 thread->donators에 추가하게함
+
 	// release 할땐 기억하고 있던 원래 priority로 set 
+	// -> donated list가 비어잇는지 부터 확인
 
 void pri_donate(struct lock *lock) {
 	struct thread *curr = thread_current();
+	if(curr->tid == 2) return;
 	if(!lock->holder) return;
 	if(!lock->holder->priority) return;
 	// lock->holder->old_priority = lock->holder->priority;
-	lock->old_pri = lock->holder->priority;
+	// lock->old_pri = lock->holder->priority;
+	list_insert_ordered (&lock->holder->donors, &curr->elem_d, less_priority_d, NULL);
 	lock->holder->priority = curr->priority;
 }
 
+// list_insert_ordered (&sema->waiters, &thread_current ()->elem, less_priority, NULL);
 
-// list_entry (list_pop_front (&sema->waiters),struct thread, elem)
+// list_entry (list_pop_front (&sema->waiters),struct thread, elem)		// list_push_back (&sema->waiters, &thread_current ()->elem);
+// list_push_back (&sema->waiters, &thread_current ()->elem);
