@@ -136,7 +136,18 @@ timer_interrupt (struct intr_frame *args UNUSED) {
 	thread_tick ();
 	
 	// next_tick = get_next_tick_to_awake();
+	#ifndef MLFQS
 	thread_awake(ticks);
+	#endif
+
+	#ifdef MLFQS
+	// 1tick -> recent_cpu 증가
+	// 1초 -> load_avg, recent_cpu, priority 계산
+	// 4tick -> priority 계산
+	mlfqs_increment();
+
+	mlfqs_recalc();
+	#endif
 	
 }
 

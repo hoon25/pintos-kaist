@@ -198,23 +198,30 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	#ifndef MLFQS
 	// // holder의 lock이 있으면 동작
 	if (lock->holder != NULL){
 		// lock의 주소 저장
 		thread_current()->wait_on_lock = lock;
 		
+
 		// donation을 받은 스레드의 thread구조체를 list로 관리
 		// -> 락을 가지고있는 스레드의 donation_list에 현재 쓰레드를 정렬해서 넣어줌
 		// list_push_back(&lock->holder->donations, &thread_current()->donation_elem);
 		list_insert_ordered(&lock->holder->donations, &thread_current()->donation_elem, cmp_priority_dona, NULL);		
 		donate_priority();
 	}
+	#endif
+
 	sema_down (&lock->semaphore);
+
+	#ifndef MLFQS
 	// 기다리고 있는 lock 값 초기화 
 	thread_current() -> wait_on_lock = NULL;
-
+	#endif
 	// lock을 획득 한 후 lock holder 갱신
 	lock->holder = thread_current ();
+
 }
 
 
@@ -282,12 +289,15 @@ void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
-
+	
+	#ifndef MLFQS
 	if ( !list_empty(&thread_current()->donations) ){
 		remove_with_lock(lock);
 		refresh_priority();	
 	}
+	#endif
 	lock->holder = NULL;
+
 	sema_up (&lock->semaphore);
 }
 

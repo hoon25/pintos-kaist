@@ -1,6 +1,10 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
+#define MLFQS
+
+
+
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
@@ -110,7 +114,10 @@ struct thread {
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
 #endif
-
+#ifdef MLFQS
+	int nice;
+	int recent_cpu;
+#endif
 	/* Owned by thread.c. */
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
@@ -153,10 +160,17 @@ int64_t get_next_tick_to_awake(void);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
+// MLFQS
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+void mlfqs_priority (struct thread *t);
+void mlfqs_recent_cpu (struct thread *t);
+void mlfqs_load_avg (void);
+void mlfqs_increment (void);
+void mlfqs_recalc (void);
 
 void do_iret (struct intr_frame *tf);
 
