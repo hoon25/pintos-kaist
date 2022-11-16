@@ -156,4 +156,7 @@ void do_iret (struct intr_frame *tf);
 bool less_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool less_priority_d(const struct list_elem *a, const struct list_elem *b, void *aux);
 
+void list_print_d (struct thread *curr);
+
+
 #endif /* threads/thread.h */

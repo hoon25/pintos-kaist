@@ -69,7 +69,6 @@ sema_down (struct semaphore *sema) {
 	while (sema->value == 0) {
 		// list_push_back (&sema->waiters, &thread_current ()->elem);
 		list_insert_ordered (&sema->waiters, &thread_current ()->elem, less_priority, NULL);
-		// pri_donate(sema, curr);
 		thread_block ();
 	}
 	sema->value--;
@@ -113,11 +112,14 @@ sema_up (struct semaphore *sema) {
 
 	old_level = intr_disable ();
 	if (!list_empty (&sema->waiters)) {
+		list_sort(&sema->waiters, less_priority, NULL);
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
 	}
 	sema->value++;
+	thread_yield();
 	intr_set_level (old_level);
+
 }
 
 static void sema_test_helper (void *sema_);
@@ -175,6 +177,7 @@ lock_init (struct lock *lock) {
 	ASSERT (lock != NULL);
 
 	lock->holder = NULL;
+	lock->donated_priority = -1;
 	sema_init (&lock->semaphore, 1);
 }
 
@@ -228,16 +231,17 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
-	struct thread *curr = thread_current();
+	struct thread *curr = thread_current(); // must be main
 	struct thread *done;
 	struct list_elem *done_elem_d;
 
 	lock->holder = NULL;
-	sema_up (&lock->semaphore);
-	// if(curr->old_priority) curr->priority = curr->old_priority;
-	// if(lock->old_pri) curr->priority = lock->old_pri;
-	// lock->old_pri = NULL;
-
+	
+	if(lock->donated_priority < 0) {
+		sema_up (&lock->semaphore);
+		return;
+	}
+	
 	if(curr->priority != curr->nature_priority) {
 	// if(!list_empty(&curr->donors)) {
 		done_elem_d = list_begin(&curr->donors);
@@ -246,8 +250,9 @@ lock_release (struct lock *lock) {
 
 			done = list_entry(done_elem_d, struct thread, elem_d);
 
-			if(curr->priority == done->priority) {
+			if(lock->donated_priority == done->priority) {
 				list_remove(&done->elem_d);
+				lock->donated_priority = -1 ;
 				break;
 			} 
 			
@@ -258,7 +263,12 @@ lock_release (struct lock *lock) {
 		else curr->priority = list_entry(list_front(&curr->donors), struct thread, elem_d)->priority;
 	}
 
-	thread_yield();
+	sema_up (&lock->semaphore);
+	// if(curr->old_priority) curr->priority = curr->old_priority;
+	// if(lock->old_pri) curr->priority = lock->old_pri;
+	// lock->old_pri = NULL;
+
+	// thread_yield();
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -369,11 +379,14 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 void pri_donate(struct lock *lock) {
 	struct thread *curr = thread_current();
 	if(curr->tid == 2) return;
-	if(!lock->holder) return;
-	if(!lock->holder->priority) return;
-	// lock->holder->old_priority = lock->holder->priority;
-	// lock->old_pri = lock->holder->priority;
+	if(!(lock->holder)) return;
+	if(intr_context()) return;
+	
+	enum intr_level old_level = intr_disable ();
+	lock->donated_priority = curr->priority;
 	list_insert_ordered (&lock->holder->donors, &curr->elem_d, less_priority_d, NULL);
+	intr_set_level (old_level);
+
 	lock->holder->priority = curr->priority;
 }
 

@@ -686,8 +686,8 @@ bool less_priority(const struct list_elem *a, const struct list_elem *b, void *a
 	else return true; 
 }
 
-/* return 0 : a < b 
- * return 1 : a >= b
+/* return 0 : a <= b : fifo를 위해서 고침
+ * return 1 : a > b
  */
 bool less_priority_d(const struct list_elem *a, const struct list_elem *b, void *aux) {
 	struct thread *thread_a;
@@ -696,6 +696,29 @@ bool less_priority_d(const struct list_elem *a, const struct list_elem *b, void 
 	thread_a = list_entry(a, struct thread, elem_d);
 	thread_b = list_entry(b, struct thread, elem_d);
 
-	if(thread_a->priority > thread_b->priority) return true;
-	else return false; 
+	if(thread_a->priority < thread_b->priority) return false;
+	else return true; 
+}
+
+
+void list_print_d (struct thread *curr) {
+	// struct thread *curr = thread_current();
+	struct thread *oncheck;
+	struct list_elem *oncheck_elem_d;
+
+	printf(":::thread %s:::\n", curr->name);
+	// if(intr_context()) return;
+	if(list_empty(&curr->donors)) {
+		printf(":::donors empty:::\n", curr->name);
+		return;
+	}
+
+	oncheck_elem_d = list_begin(&curr->donors);
+
+	while(oncheck_elem_d != list_end(&curr->donors)) {
+		oncheck = list_entry(oncheck_elem_d, struct thread, elem_d);
+		printf("thread %s : pri = %d in donors\n", oncheck->name, oncheck->priority);
+		oncheck_elem_d = list_next(oncheck_elem_d);
+	}
+	printf("donors all printed\n\n");
 }
