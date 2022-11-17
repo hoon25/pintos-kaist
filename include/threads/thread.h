@@ -160,7 +160,7 @@ int64_t get_next_tick_to_awake(void);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
-// MLFQS
+// MLFQS 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
@@ -174,4 +174,5 @@ void mlfqs_recalc (void);
 
 void do_iret (struct intr_frame *tf);
 
+int count_ready_list();
 #endif /* threads/thread.h */

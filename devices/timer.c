@@ -19,6 +19,8 @@
 
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
+int tick_4 = 0;
+int tick_100 = 0;
 
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
@@ -136,15 +138,37 @@ timer_interrupt (struct intr_frame *args UNUSED) {
 	thread_tick ();
 	
 	// next_tick = get_next_tick_to_awake();
-	#ifndef MLFQS
+	
 	thread_awake(ticks);
-	#endif
+	
 
 	#ifdef MLFQS
 	// 1tick -> recent_cpu 증가
-	// 1초 -> load_avg, recent_cpu, priority 계산
+	// 1초(100tick) -> load_avg, recent_cpu, priority 계산
 	// 4tick -> priority 계산
+	
+	// 1tick 마다 증가
 	mlfqs_increment();
+
+	tick_4++;
+	tick_100++;
+
+	if (tick_4 == 4){
+		// priority계산
+		mlfqs_priority(thread_current());
+		tick_4 = 0;
+
+	}
+	if (tick_100 == 100){
+		tick_100 = 0;
+		mlfqs_load_avg();
+
+	}
+
+	
+
+
+
 
 	mlfqs_recalc();
 	#endif

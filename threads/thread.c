@@ -22,8 +22,8 @@
 #define NICE_DEFAULT 0
 #define RECENT_CPU_DEFAULT 0
 #define LOAD_AVG_DEFAULT 0
-int load_avg;
 #endif
+int load_avg;
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -454,9 +454,9 @@ int
 thread_get_load_avg (void) {
 	enum intr_level old_level;
 	old_level = intr_disable ();
+	// mlfqs_load_avg(); //임시
 	int now_load_avg = fp_to_int_round(mult_mixed(load_avg, 100));
 	intr_set_level (old_level);
-
 	return now_load_avg;
 }
 
@@ -809,7 +809,12 @@ void mlfqs_load_avg (void){
 
 	// load_avg = (59/60) * load_avg + (1/60) * ready_threads
 	// ready_threads => ready_list에 있는 스레드 개수와, 실행중인 스레드의 개수
-	load_avg = add_fp(mult_fp(div_fp(int_to_fp(59), int_to_fp(60)),load_avg), mult_mixed(div_fp(int_to_fp(1), int_to_fp(60)), 20));
+	int ready_threads_count = 0;
+	ready_threads_count = count_ready_list();
+	if(strcmp(thread_name(), "idle") != 0){
+		ready_threads_count++;
+	}
+	load_avg = add_fp(mult_fp(div_fp(int_to_fp(59), int_to_fp(60)), load_avg), mult_mixed(div_fp(int_to_fp(1), int_to_fp(60)), ready_threads_count));
 	// load_avg는 0보다 작아질 수 없다.
 	ASSERT(load_avg>=0);
 }
@@ -827,6 +832,43 @@ void mlfqs_recalc (void){
 	mlfqs_recent_cpu(thread_current());
 	mlfqs_priority(thread_current());
 }
+
+
+// 레디리스트 스레드 수 확인
+int 
+count_ready_list(){
+	struct list *list = &ready_list;
+	int i = 0;
+	struct list_elem *e;
+	if (list_empty(list)){
+		return 0;
+	}
+	else {
+		for (e = list_begin(list); e != list_end(list); e = list_next(e)){
+			i++;
+			printf(i);
+			struct thread *t = list_entry(e, struct thread, elem);
+		}
+		return i;
+	}
+
+}
+// int 
+// count_ready_list(struct list *list){
+// 	int i = 0;
+// 	struct list_elem *e;
+// 	if (list_empty(list)){
+// 		return 0;
+// 	}
+// 	else {
+// 		for (e = list_begin(list); e != list_end(list); e = list_next(e)){
+// 			i++;
+// 			struct thread *t = list_entry(e, struct thread, elem);
+// 		}
+// 		return i;
+// 	}
+
+// }
 
 
 
