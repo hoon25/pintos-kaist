@@ -271,6 +271,7 @@ thread_unblock (struct thread *t) {
 	// list_push_back (&ready_list, &t->elem);
 	list_insert_ordered(&ready_list, &t->elem, less_priority, NULL);
 	t->status = THREAD_READY;
+	// thread_yield();
 	intr_set_level (old_level);
 }
 
@@ -440,7 +441,8 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = t->nature_priority = priority;
 	t->magic = THREAD_MAGIC;
-
+	
+	t->wanted = NULL;
 	list_init(&t->donors);
 }
 
@@ -672,8 +674,8 @@ void thread_awake(int64_t ticks) {
 	
 // }
 
-/* return 0 : a < b 
- * return 1 : a >= b
+/* return 0 : a <= b 
+ * return 1 : a > b
  */
 bool less_priority(const struct list_elem *a, const struct list_elem *b, void *aux) {
 	struct thread *thread_a;
@@ -682,8 +684,8 @@ bool less_priority(const struct list_elem *a, const struct list_elem *b, void *a
 	thread_a = list_entry(a, struct thread, elem);
 	thread_b = list_entry(b, struct thread, elem);
 
-	if(thread_a->priority < thread_b->priority) return false;
-	else return true; 
+	if(thread_a->priority > thread_b->priority) return true;
+	else return false; 
 }
 
 /* return 0 : a <= b : fifo를 위해서 고침
@@ -696,8 +698,8 @@ bool less_priority_d(const struct list_elem *a, const struct list_elem *b, void 
 	thread_a = list_entry(a, struct thread, elem_d);
 	thread_b = list_entry(b, struct thread, elem_d);
 
-	if(thread_a->priority < thread_b->priority) return false;
-	else return true; 
+	if(thread_a->priority > thread_b->priority) return true;
+	else return false; 
 }
 
 

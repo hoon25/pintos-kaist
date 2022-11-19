@@ -95,6 +95,8 @@ struct thread {
 	int nature_priority;					/*  */
 	struct list donors;
 	struct list_elem elem_d;
+	// struct thread *wanted;
+	struct lock *wanted;
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */

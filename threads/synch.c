@@ -347,7 +347,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	ASSERT (!intr_context ());
 	ASSERT (lock_held_by_current_thread (lock));
 
-	if (!list_empty (&cond->waiters))
+	if (!list_empty (&cond->waiters)) 
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);
 }
@@ -378,16 +378,36 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 
 void pri_donate(struct lock *lock) {
 	struct thread *curr = thread_current();
+	struct thread *M; 
+	struct lock *Mwanted;
+	struct thread *L;
+
 	if(curr->tid == 2) return;
 	if(!(lock->holder)) return;
 	if(intr_context()) return;
-	
-	enum intr_level old_level = intr_disable ();
-	lock->donated_priority = curr->priority;
-	list_insert_ordered (&lock->holder->donors, &curr->elem_d, less_priority_d, NULL);
-	intr_set_level (old_level);
 
-	lock->holder->priority = curr->priority;
+	M = lock->holder;
+	lock->donated_priority = curr->priority;
+	list_insert_ordered (&M->donors, &curr->elem_d, less_priority_d, NULL);
+	M->priority = curr->priority;
+	curr->wanted = lock;
+	// curr = H
+	// lock->holder = M
+	// lock->holder->wanted = L
+	Mwanted = M->wanted;
+	while(Mwanted){
+		// L의 donors에서 M을 지우고 H가 들어가야함 
+		// L의 priority 를 실제로 바꿔줘야함 
+		L = Mwanted->holder; 
+		list_remove(&M->elem_d);
+		list_insert_ordered (&L->donors, &curr->elem_d, less_priority_d, NULL);
+		L -> priority = curr->priority;
+		Mwanted->donated_priority = curr->priority;
+
+		M = L;
+		// L = L->wanted->holder;
+		Mwanted = M->wanted;
+	}
 }
 
 // list_insert_ordered (&sema->waiters, &thread_current ()->elem, less_priority, NULL);
