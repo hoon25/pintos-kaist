@@ -8,6 +8,7 @@
 #include "hash.h"
 #include "../debug.h"
 #include "threads/malloc.h"
+#include "vm/vm.h"
 
 #define list_elem_to_hash_elem(LIST_ELEM)                       \
 	list_entry(LIST_ELEM, struct hash_elem, list_elem)
@@ -392,3 +393,21 @@ remove_elem (struct hash *h, struct hash_elem *e) {
 	list_remove (&e->list_elem);
 }
 
+void
+printf_hash_page(struct supplemental_page_table *spt){
+	struct hash *h = &spt->page_hash;
+	struct hash_iterator i;
+   	hash_first (&i, h);
+	printf("===== hash 순회시작 =====\n");
+   	while (hash_next (&i))
+   	{
+		struct page *p = hash_entry(hash_cur(&i), struct page, hash_elem);
+		if (p->frame == NULL){
+			printf("va: %X, type : %d vm_type:%d uninit.type:%d writable : %d \n",p->va, p->operations->type, p->vm_type, p->uninit.type, p->writable, p->vm_type);
+		}
+		else {
+			printf("va: %X, type : %d vm_type:%d writable : %d kva : %X\n",p->va, p->operations->type, p->vm_type, p->writable, p->frame->kva);
+		}
+   	}
+	printf("===== hash 순회종료 =====\n");
+}

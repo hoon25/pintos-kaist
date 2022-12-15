@@ -15,6 +15,7 @@
 #include "lib/string.h"				// strlcpy 필수
 #include "userprog/process.h"
 #include "threads/palloc.h"
+#include <round.h>
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -99,13 +100,87 @@ syscall_init (void) {
 	lock_init(&filesys_lock);
 }
 
+/*
+* *유효주소 여부 확인
+* 유저가상주소 할당 OR user stack범위내부
+*/
+bool
+check_valid_addr(void * addr){
+	struct thread *curr = thread_current();
+	struct page *page;
+	// printf("====check_valid_addr\n");
+	// printf("fault_addr : %X f->rsp : %X thread_current()->stack_pointer : %X\n", addr, curr->tf.rsp, thread_current()->stack_pointer);
+	if ((addr
+			&& is_user_vaddr(addr)
+			&& ( (page = spt_find_page(&curr->spt, addr)) != NULL) 
+				||(addr <= USER_STACK && addr >= USER_STACK - 0x100000  && addr >= pg_round_down(curr->spt.stack_pointer)) )){
+		return true;
+	}
+	else
+		return false;
+}
+
+/*
+* *버퍼 유효성 확인
+* writable체크(가상주소만, 스택X), 유효주소여부확인
+*/
+bool
+check_valid_buffer(void* buffer, unsigned size, bool need_writable){
+	// offset 정렬
+	struct thread *curr = thread_current();
+	if (pg_ofs(buffer) != 0){
+		size += (buffer - pg_round_down(buffer));
+		buffer = pg_round_down(buffer);
+	}
+	ASSERT(pg_ofs(buffer) == 0); //정렬 여부 확인
+	while(1){
+		// 유효주소 확인
+		if (!check_valid_addr(buffer))
+			return false;
+		// writable 확인
+		struct page* page = spt_find_page(&curr->spt, buffer);
+		if(page!= NULL && !page->writable && need_writable){
+			return false;
+		}
+		if(size < PGSIZE){
+			break; 
+		}
+		buffer += PGSIZE;
+		size -= PGSIZE;
+	}
+	return true;
+}
+
+/*
+* *mmap 유효성 확인
+* 페이지 전체 SPT확인
+*/
+bool
+check_valid_mmap(void* addr, unsigned size){
+	unsigned addr_size = ROUND_UP(size, PGSIZE);
+
+	while(addr_size!=0){
+		// printf("addr : %X, addr_size :%u\n", addr, addr_size);
+		if(spt_find_page(&thread_current()->spt, addr)){
+			return false;
+		}
+		addr_size -= PGSIZE;
+		addr += PGSIZE;
+	}
+	return true;
+}
+
+
 
 /* The main system call interface */
 void
 syscall_handler (struct intr_frame *f UNUSED) {
     // TODO: Your implementation goes here.
     // run_actions() in threads/init.c 참고
-    
+
+	int syscall_n = f->R.rax;
+	thread_current()->spt.stack_pointer = f->rsp; 
+
     struct action {
         uint64_t syscall_num;
         void (*function) (struct intr_frame *);
@@ -143,7 +218,6 @@ exit_handler (struct intr_frame *f) {
     int status = (int) ARG1;
 	struct thread *curr = thread_current();
 	curr->exit_status = status;
-	if(curr->tid == 420) printf("%d, 받은거 = %d\n", curr->exit_status, status);
 	// curr->my_parent->child_will = status;
 	// curr->my_parent->my_child = NULL;
     thread_exit();
@@ -282,7 +356,7 @@ read_handler (struct intr_frame *f) {
 	if (is_bad_fd(fd) 
 		|| is_STDOUT(fd) 
 		|| !(file_ptr = fd_file(fd))
-		|| is_bad_ptr(buffer)) 			// buffer valid check
+		|| !check_valid_buffer(buffer, size, false)) 			// buffer valid check
 	{
 		RET_VAL = -1;
 		error_exit();
@@ -308,7 +382,7 @@ write_handler (struct intr_frame *f) {
 	else if (is_bad_fd(fd)
 		|| is_STDIN(fd)
 		|| !(file_ptr = fd_file(fd))
-		|| is_bad_ptr(buffer))
+		|| !check_valid_buffer(buffer, size, true))
 	{
 		RET_VAL = 0;
 		error_exit();
