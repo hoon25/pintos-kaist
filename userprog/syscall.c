@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include <round.h>
 
+
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 void custom_dump_frame(struct intr_frame *f);
@@ -82,6 +83,7 @@ void error_exit(void);
 /* macro for reference fd_array */
 #define fd_file(fd)			(curr->fd_array[fd])
 
+
 void
 syscall_init (void) {
     write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48  |
@@ -108,8 +110,6 @@ bool
 check_valid_addr(void * addr){
 	struct thread *curr = thread_current();
 	struct page *page;
-	// printf("====check_valid_addr\n");
-	// printf("fault_addr : %X f->rsp : %X thread_current()->stack_pointer : %X\n", addr, curr->tf.rsp, thread_current()->stack_pointer);
 	if ((addr
 			&& is_user_vaddr(addr)
 			&& ( (page = spt_find_page(&curr->spt, addr)) != NULL) 
@@ -139,7 +139,8 @@ check_valid_buffer(void* buffer, unsigned size, bool need_writable){
 			return false;
 		// writable 확인
 		struct page* page = spt_find_page(&curr->spt, buffer);
-		if(page!= NULL && !page->writable && need_writable){
+		struct page* p = page;
+		if(page!= NULL && (!page->writable && need_writable)){
 			return false;
 		}
 		if(size < PGSIZE){
@@ -356,7 +357,7 @@ read_handler (struct intr_frame *f) {
 	if (is_bad_fd(fd) 
 		|| is_STDOUT(fd) 
 		|| !(file_ptr = fd_file(fd))
-		|| !check_valid_buffer(buffer, size, false)) 			// buffer valid check
+		|| !check_valid_buffer(buffer, size, true)) 			// buffer valid check
 	{
 		RET_VAL = -1;
 		error_exit();
@@ -382,7 +383,7 @@ write_handler (struct intr_frame *f) {
 	else if (is_bad_fd(fd)
 		|| is_STDIN(fd)
 		|| !(file_ptr = fd_file(fd))
-		|| !check_valid_buffer(buffer, size, true))
+		|| !check_valid_buffer(buffer, size, false))
 	{
 		RET_VAL = 0;
 		error_exit();
@@ -501,3 +502,22 @@ umount_handler (const char *path) {
 }
 *****************************************************************/
 
+
+void
+printf_hash_page2(struct supplemental_page_table *spt){
+	struct hash *h = &spt->page_hash;
+	struct hash_iterator i;
+   	hash_first (&i, h);
+	printf("===== hash 순회시작 =====\n");
+   	while (hash_next (&i))
+   	{
+		struct page *p = hash_entry(hash_cur(&i), struct page, hash_elem);
+		if (p->frame == NULL){
+			printf("va: %X, type : %d vm_type:%d uninit.type:%d writable : %d \n",p->va, p->operations->type, p->vm_type, p->uninit.type, p->writable, p->vm_type);
+		}
+		else {
+			printf("va: %X, type : %d vm_type:%d writable : %d kva : %X\n",p->va, p->operations->type, p->vm_type, p->writable, p->frame->kva);
+		}
+   	}
+	printf("===== hash 순회종료 =====\n");
+}

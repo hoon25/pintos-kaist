@@ -164,6 +164,7 @@ vm_get_frame (void) {
 static void
 vm_stack_growth (void *addr UNUSED) {
 	
+	addr = pg_round_down(addr);
 	vm_alloc_page(VM_ANON, addr, true);
 	vm_claim_page(addr); //frame이랑 연결하고
 	struct page *page = spt_find_page(&thread_current()->spt, addr);
@@ -233,7 +234,6 @@ vm_claim_page (void *va UNUSED) {
 	
 	ASSERT(pg_ofs (va) == 0 ); // 추가한 검증
 	page = spt_find_page(&curr->spt, va);
-
 	return vm_do_claim_page (page);
 }
 
