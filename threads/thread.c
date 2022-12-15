@@ -227,15 +227,14 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
-	t->my_parent = thread_current();
 	struct child_info *my_info = (struct child_info *) malloc (sizeof (struct child_info));
 	t->my_info = my_info;
 	my_info->tid = t->tid;
 	my_info->exit_status = t->exit_status;
 	my_info->is_zombie = false;
-	my_info->child_thread = t;
+	my_info->child_thread = t;			// child_thread 여기서 Child는 my_info에 정보와 같은 thread
 	sema_init(&my_info->sema, 0);
-	list_push_back(&thread_current()->child_list, &my_info->elem_c);
+	list_push_back(&thread_current()->child_list, &my_info->elem_c);  // 부모(나)의 child_list에 지금 만들어지는 자식의 child_info 추가
 
 	/* Add to run queue. */
 	thread_unblock (t);
@@ -518,7 +517,6 @@ init_thread (struct thread *t, const char *name, int priority) {
 
 	// exit state 초기화
 	t->exit_status = 0;
-	t->being_forked = false;
 	// child, parent 초기화
 	t->my_info = NULL;
 	t->my_parent = running_thread();
